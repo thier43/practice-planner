@@ -3,6 +3,13 @@ const crypto = require('crypto');
 const { tursoBatch, rowsToObjects } = require('./_db');
 
 module.exports = async (req, res) => {
+  // CORS : permet d'appeler cette API depuis index.html ouvert en local (file://),
+  // qui envoie un Origin "null". Nécessaire pour l'usage 100% local sur ce PC.
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') { return res.status(204).end(); }
+
   try {
     if (req.method === 'GET') {
       const results = await tursoBatch([

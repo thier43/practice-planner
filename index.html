@@ -189,6 +189,7 @@
   }
   .lib-row .ttl{flex:1;font-size:13px;}
   .lib-row .meta{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;}
+  .status{font-size:10px;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.06);color:var(--text-muted);display:inline-block;}
   .lib-row .status{font-size:10px;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.06);color:var(--text-muted);}
   .lib-row .res-btn{
     background:none;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;
@@ -254,6 +255,30 @@
     <div id="days-container" style="display:flex;flex:1;"></div>
   </div>
 </main>
+
+<!-- Fiche de l'élément (vue rapide en cliquant une séance) -->
+<div class="overlay" id="item-view-modal">
+  <div class="modal">
+    <h2 id="iv-title" style="margin-bottom:8px;"></h2>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+      <span class="status" id="iv-type"></span>
+      <span class="status" id="iv-status"></span>
+    </div>
+    <p id="iv-session-info" class="mono" style="font-size:12.5px;color:var(--text-muted);margin:0 0 12px;"></p>
+    <p id="iv-desc" style="font-size:13px;color:var(--text);margin:0 0 6px;"></p>
+    <p id="iv-notes" style="font-size:13px;color:var(--text-muted);margin:0 0 16px;font-style:italic;"></p>
+    <div id="iv-resource-wrap" style="margin-bottom:6px;"></div>
+    <div class="modal-actions">
+      <div>
+        <button class="btn ghost" id="iv-close">Fermer</button>
+      </div>
+      <div class="right">
+        <button class="btn" id="iv-timer">⏱ Démarrer le minuteur</button>
+        <button class="btn primary" id="iv-edit">✎ Modifier la séance</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Session modal -->
 <div class="overlay" id="session-overlay">
@@ -590,7 +615,7 @@ function renderCalGrid(){
       const items = (sess.items||[]).map(it=>it.title).filter(Boolean);
       block.innerHTML = `<div class="t">${sess.start_time.slice(0,5)} · ${minsLabel(sess.duration_minutes)}</div>
         <div class="title-line">${items.length? items.join(', ') : (sess.notes ? sess.notes.slice(0,40) : '(sans titre)')}</div>`;
-      block.onclick = (e)=>{ e.stopPropagation(); openSessionModal(sess); };
+      block.onclick = (e)=>{ e.stopPropagation(); openSessionView(sess); };
       body.appendChild(block);
     });
 
@@ -623,6 +648,69 @@ document.querySelectorAll('.chip[data-cat]').forEach(chip=>{
     renderAll();
   };
 });
+
+/* ---------- fiche rapide de l'élément (clic sur une séance) ---------- */
+const itemViewModal = document.getElementById('item-view-modal');
+let viewingSession = null;
+
+function openSessionView(sess){
+  if(!sess.items || sess.items.length !== 1){
+    // Pas de vue simple pertinente : séance sans élément ou multi-éléments -> édition directe
+    openSessionModal(sess);
+    return;
+  }
+  viewingSession = sess;
+  const it = sess.items[0];
+
+  document.getElementById('iv-title').textContent = it.title;
+  document.getElementById('iv-type').textContent = TYPE_LABEL[it.type];
+  document.getElementById('iv-status').textContent = STATUS_LABEL[it.status];
+  document.getElementById('iv-desc').textContent = it.description || '';
+  document.getElementById('iv-desc').style.display = it.description ? 'block' : 'none';
+
+  const d = new Date(sess.session_date+'T00:00:00');
+  const dateStr = String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+  document.getElementById('iv-session-info').textContent =
+    `${dateStr} · ${sess.start_time.slice(0,5)} · ${minsLabel(sess.duration_minutes)}${sess.done ? ' · ✓ Fait' : ''}`;
+
+  document.getElementById('iv-notes').textContent = sess.notes || '';
+  document.getElementById('iv-notes').style.display = sess.notes ? 'block' : 'none';
+
+  const resWrap = document.getElementById('iv-resource-wrap');
+  if(it.resource_path){
+    resWrap.innerHTML = looksLikeUrl(it.resource_path)
+      ? `<a class="res-btn" style="display:inline-flex;padding:8px 14px;" href="${escapeHtml(it.resource_path)}" target="_blank" rel="noopener">📂 Ouvrir les supports</a>`
+      : `<button class="res-btn" style="display:inline-flex;padding:8px 14px;" id="iv-copy-resource">📂 Copier le chemin</button>`;
+    const copyBtn = document.getElementById('iv-copy-resource');
+    if(copyBtn){
+      copyBtn.onclick = async ()=>{
+        try{
+          await navigator.clipboard.writeText(it.resource_path);
+          const original = copyBtn.textContent;
+          copyBtn.textContent = '✓ Copié';
+          setTimeout(()=>{ copyBtn.textContent = original; }, 1200);
+        } catch(err){ alert('Chemin : '+it.resource_path); }
+      };
+    }
+  } else {
+    resWrap.innerHTML = '<p class="empty-note" style="text-align:left;padding:0;">Aucun support renseigné pour cet élément.</p>';
+  }
+
+  itemViewModal.classList.add('open');
+}
+
+document.getElementById('iv-close').onclick = ()=> itemViewModal.classList.remove('open');
+itemViewModal.addEventListener('click', (e)=>{ if(e.target===itemViewModal) itemViewModal.classList.remove('open'); });
+
+document.getElementById('iv-edit').onclick = ()=>{
+  itemViewModal.classList.remove('open');
+  openSessionModal(viewingSession);
+};
+
+document.getElementById('iv-timer').onclick = ()=>{
+  if(!viewingSession) return;
+  openTimer(viewingSession.duration_minutes, viewingSession.items[0].title);
+};
 
 /* ---------- session modal ---------- */
 const sessionOverlay = document.getElementById('session-overlay');

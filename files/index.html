@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Salle de Travail — Planning de pratique</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500;1,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -269,6 +272,10 @@
     <div class="field">
       <label>Éléments travaillés</label>
       <div class="item-pick" id="s-items"></div>
+    </div>
+    <div class="field" id="s-resources-wrap" style="display:none;">
+      <label>📂 Supports pour cette séance</label>
+      <div id="s-resources" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
     </div>
     <div class="field"><label>Notes</label><textarea id="s-notes" placeholder="Points à travailler, tempo, ressenti..."></textarea></div>
     <div class="modal-actions">
@@ -593,13 +600,47 @@ function renderItemPicker(selectedIds){
   const cat = document.getElementById('s-category').value;
   const wrap = document.getElementById('s-items');
   const list = state.items.filter(it => cat==='mixte' || it.category===cat);
-  if(list.length===0){ wrap.innerHTML = '<div class="empty-note">Aucun élément dans cette catégorie. Ajoute-en depuis la Bibliothèque.</div>'; return; }
+  if(list.length===0){
+    wrap.innerHTML = '<div class="empty-note">Aucun élément dans cette catégorie. Ajoute-en depuis la Bibliothèque.</div>';
+    renderSessionResources();
+    return;
+  }
   wrap.innerHTML = list.map(it=>`
     <label>
       <input type="checkbox" value="${it.id}" ${selectedIds.has(it.id)?'checked':''}>
-      ${it.title}
+      ${escapeHtml(it.title)}
+      ${it.resource_path ? '<span title="Supports disponibles">📂</span>' : ''}
       <span class="badge">${TYPE_LABEL[it.type]}</span>
     </label>`).join('');
+  wrap.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener('change', renderSessionResources);
+  });
+  renderSessionResources();
+}
+
+function renderSessionResources(){
+  const checkedIds = Array.from(document.querySelectorAll('#s-items input:checked')).map(i=>i.value);
+  const withResources = checkedIds
+    .map(id => state.items.find(it=>it.id===id))
+    .filter(it => it && it.resource_path);
+  const wrapEl = document.getElementById('s-resources-wrap');
+  const el = document.getElementById('s-resources');
+  if(withResources.length===0){ wrapEl.style.display='none'; el.innerHTML=''; return; }
+  wrapEl.style.display='block';
+  el.innerHTML = withResources.map(it => looksLikeUrl(it.resource_path)
+    ? `<a class="res-btn" href="${escapeHtml(it.resource_path)}" target="_blank" rel="noopener">📂 ${escapeHtml(it.title)}</a>`
+    : `<button type="button" class="res-btn" data-copy="${escapeHtml(it.resource_path)}">📂 ${escapeHtml(it.title)}</button>`
+  ).join('');
+  el.querySelectorAll('[data-copy]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      try{
+        await navigator.clipboard.writeText(btn.dataset.copy);
+        const original = btn.textContent;
+        btn.textContent = '✓ Copié';
+        setTimeout(()=>{ btn.textContent = original; }, 1200);
+      } catch(err){ alert('Chemin : '+btn.dataset.copy); }
+    };
+  });
 }
 document.getElementById('s-category').addEventListener('change', ()=>renderItemPicker(new Set()));
 

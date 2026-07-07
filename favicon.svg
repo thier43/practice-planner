@@ -1,0 +1,49 @@
+<svg width="512" height="512" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="35%" cy="30%" r="80%">
+      <stop offset="0%" stop-color="#2C313B"/>
+      <stop offset="100%" stop-color="#1B1E23"/>
+    </radialGradient>
+  </defs>
+
+  <rect x="0" y="0" width="100" height="100" rx="22" fill="url(#bg)"/>
+
+  <g transform="rotate(-18 50 50)">
+    <!-- corps de la guitare (deux bouts qui se chevauchent) -->
+    <circle cx="50" cy="63" r="16" fill="#C99A4B"/>
+    <circle cx="50" cy="83" r="21" fill="#C99A4B"/>
+    <circle cx="50" cy="63" r="16" fill="none" stroke="#8A6432" stroke-width="1.6"/>
+    <circle cx="50" cy="83" r="21" fill="none" stroke="#8A6432" stroke-width="1.6"/>
+
+    <!-- rosace -->
+    <circle cx="50" cy="70" r="6.2" fill="#1B1E23"/>
+    <circle cx="50" cy="70" r="6.2" fill="none" stroke="#8A6432" stroke-width="1.2"/>
+
+    <!-- chevalet -->
+    <rect x="44" y="88" width="12" height="3" rx="1.4" fill="#3A2A18"/>
+
+    <!-- cordes -->
+    <line x1="46.5" y1="52" x2="46.5" y2="90" stroke="#EDEAE3" stroke-width="0.6" opacity="0.55"/>
+    <line x1="50" y1="50" x2="50" y2="90" stroke="#EDEAE3" stroke-width="0.6" opacity="0.55"/>
+    <line x1="53.5" y1="52" x2="53.5" y2="90" stroke="#EDEAE3" stroke-width="0.6" opacity="0.55"/>
+
+    <!-- manche -->
+    <rect x="46" y="24" width="8" height="30" rx="1.5" fill="#8A6432"/>
+    <!-- frettes -->
+    <line x1="46" y1="30" x2="54" y2="30" stroke="#1B1E23" stroke-width="0.7" opacity="0.5"/>
+    <line x1="46" y1="36" x2="54" y2="36" stroke="#1B1E23" stroke-width="0.7" opacity="0.5"/>
+    <line x1="46" y1="42" x2="54" y2="42" stroke="#1B1E23" stroke-width="0.7" opacity="0.5"/>
+    <line x1="46" y1="48" x2="54" y2="48" stroke="#1B1E23" stroke-width="0.7" opacity="0.5"/>
+
+    <!-- tete -->
+    <rect x="41" y="8" width="18" height="18" rx="4" fill="#6F4E27"/>
+
+    <!-- chevilles -->
+    <circle cx="40.5" cy="12" r="2.1" fill="#EDEAE3"/>
+    <circle cx="40.5" cy="17" r="2.1" fill="#EDEAE3"/>
+    <circle cx="40.5" cy="22" r="2.1" fill="#EDEAE3"/>
+    <circle cx="59.5" cy="12" r="2.1" fill="#EDEAE3"/>
+    <circle cx="59.5" cy="17" r="2.1" fill="#EDEAE3"/>
+    <circle cx="59.5" cy="22" r="2.1" fill="#EDEAE3"/>
+  </g>
+</svg>

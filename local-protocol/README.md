@@ -72,27 +72,18 @@ Ouvre l'URL Vercel (`practice-planner.vercel.app`), clique **Bibliothèque**, aj
 - Historique / statistiques sur plusieurs mois
 - Export du planning de la semaine en PDF
 
-## Usage 100% local (un seul PC, liens vers dossiers cliquables)
+## Ouvrir directement tes dossiers locaux depuis l'app
 
-Pour que les liens vers tes dossiers de supports (`D:\Cours\...`) soient directement cliquables — sans rien installer, sans souci d'antivirus — l'app est conçue pour être ouverte **directement depuis ton disque**, plutôt que via l'URL Vercel.
+Par défaut, les navigateurs bloquent l'ouverture de liens `file://` depuis une page web (mesure de sécurité). Pour pouvoir cliquer sur un chemin local (ex: `D:\Cours\Kesh Jig`) et l'ouvrir directement dans l'Explorateur Windows, l'app utilise un protocole personnalisé `ouvrir://`, comme le font Zoom ou Slack pour leurs liens.
 
-**Pourquoi ça marche comme ça :** les navigateurs bloquent les liens `file://` uniquement quand la page qui les affiche vient d'un site web (`https://...`). Si la page elle-même est ouverte en local (double-clic sur `index.html`), cette restriction ne s'applique plus.
+**Installation (une seule fois, sur chaque PC où tu utilises l'app) :**
 
-### Mise en place
+1. Récupère le dossier `local-protocol/` (contient `install-protocol.bat` et `open-folder.vbs`)
+2. Double-clique sur `install-protocol.bat`
+3. Une fenêtre noire confirme "Protocole ouvrir:// installé avec succès" — ferme-la
 
-1. Vérifie que `API_BASE` en haut du `<script>` dans `index.html` pointe bien vers ton URL Vercel :
-   ```js
-   const API_BASE = 'https://thier43-practice-planner.vercel.app';
-   ```
-   ⚠️ à confirmer/corriger si ton URL Vercel réelle est différente (vérifie sur ton dashboard Vercel).
-2. Déploie normalement une dernière fois (`git push`) pour que l'API en ligne ait bien les en-têtes CORS nécessaires.
-3. Ensuite, **au quotidien, n'ouvre plus l'URL Vercel** : ouvre directement le fichier `index.html` sur ton PC (double-clic, ou crée un raccourci sur le Bureau).
+**Ensuite**, dans la Bibliothèque, renseigne simplement le chemin du dossier normalement (ex: `D:\Cours\Kesh Jig`), et le bouton **📂 Ouvrir** l'ouvrira directement dans l'Explorateur.
 
-L'app continue de lire/écrire tes données via Turso (donc il te faut une connexion internet), mais l'interface tourne en local — et les liens vers tes dossiers s'ouvrent nativement.
+**La première fois** que tu cliques sur un lien `ouvrir://` dans ton navigateur, une popup demande de confirmer l'ouverture de l'application liée au protocole — coche "Toujours autoriser" pour ne plus avoir cette question ensuite.
 
-### Ce que ça change
-
-- ✅ Plus besoin d'installer de protocole personnalisé, plus de souci d'antivirus
-- ✅ Liens locaux cliquables, ouverture directe dans le navigateur (vue dossier)
-- ❌ L'app ne sera plus utilisable depuis ton téléphone ou un autre PC via l'URL Vercel — sauf si tu recommences à l'ouvrir via cette URL ponctuellement (rien ne l'en empêche techniquement, seuls les liens locaux ne fonctionneront pas dans ce cas)
-- Le dossier `local-protocol/` (protocole `ouvrir://`) n'est plus nécessaire, tu peux l'ignorer ou le supprimer
+⚠️ Cette installation est propre à **cet ordinateur** : si tu utilises l'app depuis un autre PC (ou ton téléphone), les chemins locaux n'y seront pas cliquables — utilise plutôt un lien cloud (pCloud, etc.) pour les supports que tu veux ouvrir depuis plusieurs appareils.

@@ -398,7 +398,7 @@
     <div class="field"><label>Notes</label><textarea id="li-desc" placeholder="Optionnel"></textarea></div>
     <div class="field">
       <label>Dossier / lien des supports (vidéo, audio, PDF...)</label>
-      <input type="text" id="li-resource" placeholder="Ex : D:\Cours\Kesh Jig (cliquable si tu ouvres l'app en local) ou lien web">
+      <input type="text" id="li-resource" placeholder="Ex : D:\Cours\Kesh Jig (cliquable après installation, voir README) ou lien web">
     </div>
     <input type="hidden" id="li-id">
     <div class="modal-actions">
@@ -414,16 +414,9 @@
 </div>
 
 <script>
-/* ============ CONFIGURATION ============ */
-// URL de ton déploiement Vercel (celle qui héberge /api/items et /api/sessions).
-// Utilisée même quand ce fichier est ouvert en local (file://), pour continuer
-// à lire/écrire les données dans Turso.
-const API_BASE = 'https://thier43-practice-planner.vercel.app';
-/* ======================================== */
-
 /* ---------- petit client pour les routes /api/* (Vercel + Turso) ---------- */
 async function api(path, options){
-  const res = await fetch(API_BASE + path, {
+  const res = await fetch(path, {
     headers: {'Content-Type':'application/json'},
     ...options
   });
@@ -842,21 +835,21 @@ function isWindowsPath(s){
   return /^[a-zA-Z]:[\\/]/.test(s) || /^\\\\/.test(s);
 }
 
-function toFileLink(p){
+function toOuvrirLink(p){
   const normalized = p.replace(/\\/g, '/');
-  return 'file:///' + normalized.split('/').map(encodeURIComponent).join('/');
+  return 'ouvrir:///' + normalized.split('/').map(encodeURIComponent).join('/');
 }
 
 // Génère le HTML d'un bouton d'accès aux supports, quel que soit le type de chemin :
-// lien web -> ouvre un nouvel onglet ; chemin Windows -> lien file:// (ne fonctionne que
-// si cette page est elle-même ouverte en local, via file://, pas via Vercel) ; sinon -> copie.
+// lien web -> ouvre un nouvel onglet ; chemin Windows -> lien "ouvrir://" (nécessite
+// l'installation ponctuelle du protocole, voir local-protocol/) ; sinon -> copie le texte.
 function resourceButtonHtml(path, label){
   label = label || '📂 Ouvrir';
   if(looksLikeUrl(path)){
     return `<a class="res-btn" href="${escapeHtml(path)}" target="_blank" rel="noopener">${label}</a>`;
   }
   if(isWindowsPath(path)){
-    return `<a class="res-btn" href="${escapeHtml(toFileLink(path))}" target="_blank">${label}</a>`;
+    return `<a class="res-btn" href="${escapeHtml(toOuvrirLink(path))}">${label}</a>`;
   }
   return `<button type="button" class="res-btn" data-copy="${escapeHtml(path)}">📋 Copier</button>`;
 }

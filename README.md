@@ -71,3 +71,19 @@ Ouvre l'URL Vercel (`practice-planner.vercel.app`), clique **Bibliothèque**, aj
 - Séances récurrentes (ex: "gammes tous les mardis")
 - Historique / statistiques sur plusieurs mois
 - Export du planning de la semaine en PDF
+
+## Ouvrir directement tes dossiers locaux depuis l'app
+
+Par défaut, les navigateurs bloquent l'ouverture de liens `file://` depuis une page web (mesure de sécurité). Pour pouvoir cliquer sur un chemin local (ex: `D:\Cours\Kesh Jig`) et l'ouvrir directement dans l'Explorateur Windows, l'app utilise un protocole personnalisé `ouvrir://`, comme le font Zoom ou Slack pour leurs liens.
+
+**Installation (une seule fois, sur chaque PC où tu utilises l'app) :**
+
+1. Récupère le dossier `local-protocol/` (contient `install-protocol.bat` et `open-folder.vbs`)
+2. Double-clique sur `install-protocol.bat`
+3. Une fenêtre noire confirme "Protocole ouvrir:// installé avec succès" — ferme-la
+
+**Ensuite**, dans la Bibliothèque, renseigne simplement le chemin du dossier normalement (ex: `D:\Cours\Kesh Jig`), et le bouton **📂 Ouvrir** l'ouvrira directement dans l'Explorateur.
+
+**La première fois** que tu cliques sur un lien `ouvrir://` dans ton navigateur, une popup demande de confirmer l'ouverture de l'application liée au protocole — coche "Toujours autoriser" pour ne plus avoir cette question ensuite.
+
+⚠️ Cette installation est propre à **cet ordinateur** : si tu utilises l'app depuis un autre PC (ou ton téléphone), les chemins locaux n'y seront pas cliquables — utilise plutôt un lien cloud (pCloud, etc.) pour les supports que tu veux ouvrir depuis plusieurs appareils.

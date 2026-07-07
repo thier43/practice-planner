@@ -174,6 +174,11 @@
   .lib-row .ttl{flex:1;font-size:13px;}
   .lib-row .meta{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;}
   .lib-row .status{font-size:10px;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.06);color:var(--text-muted);}
+  .lib-row .res-btn{
+    background:none;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;
+    font-size:11px;padding:3px 8px;border-radius:6px;text-decoration:none;white-space:nowrap;
+  }
+  .lib-row .res-btn:hover{color:var(--text);border-color:var(--text-muted);}
   .icon-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;padding:4px;}
   .icon-btn:hover{color:var(--text);}
   .icon-btn.del:hover{color:var(--danger);}
@@ -288,7 +293,7 @@
       <div class="chip" data-libcat="jazz"><span class="dot jazz"></span>Jazz</div>
     </div>
     <div class="lib-list" id="lib-list"></div>
-    <h2 style="font-size:15px;margin-top:4px;">Ajouter un élément</h2>
+    <h2 id="li-form-title" style="font-size:15px;margin-top:4px;">Ajouter un élément</h2>
     <div class="field"><label>Titre</label><input type="text" id="li-title" placeholder="Ex : The Kesh Jig, gamme bebop en Bb..."></div>
     <div class="row2">
       <div class="field">
@@ -309,8 +314,15 @@
       </div>
     </div>
     <div class="field"><label>Notes</label><textarea id="li-desc" placeholder="Optionnel"></textarea></div>
+    <div class="field">
+      <label>Dossier / lien des supports (vidéo, audio, PDF...)</label>
+      <input type="text" id="li-resource" placeholder="Ex : D:\Cours\Kesh Jig ou lien Drive/OneDrive">
+    </div>
+    <input type="hidden" id="li-id">
     <div class="modal-actions">
-      <div></div>
+      <div>
+        <button class="btn ghost" id="li-edit-cancel" style="display:none;">Annuler la modification</button>
+      </div>
       <div class="right">
         <button class="btn ghost" id="li-cancel-close">Fermer</button>
         <button class="btn primary" id="li-add">Ajouter</button>
@@ -639,7 +651,7 @@ document.getElementById('btn-new-session').onclick = ()=> openSessionModal(null,
 
 /* ---------- library modal ---------- */
 const libraryModal = document.getElementById('library-modal');
-document.getElementById('btn-library').onclick = ()=>{ renderLibraryList(); libraryModal.classList.add('open'); };
+document.getElementById('btn-library').onclick = ()=>{ resetLibraryForm(); renderLibraryList(); libraryModal.classList.add('open'); };
 document.getElementById('li-cancel-close').onclick = ()=>{ libraryModal.classList.remove('open'); reload(); };
 libraryModal.addEventListener('click', (e)=>{ if(e.target===libraryModal){ libraryModal.classList.remove('open'); reload(); } });
 
@@ -648,9 +660,20 @@ document.querySelectorAll('.chip[data-libcat]').forEach(chip=>{
     state.libCat = chip.dataset.libcat;
     document.querySelectorAll('.chip[data-libcat]').forEach(c=>c.classList.remove('active-irish','active-jazz'));
     chip.classList.add('active-'+chip.dataset.libcat);
+    resetLibraryForm();
     renderLibraryList();
   };
 });
+
+let editingItemId = null;
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function looksLikeUrl(s){
+  return /^https?:\/\//i.test(s);
+}
 
 function renderLibraryList(){
   const list = document.getElementById('lib-list');
@@ -658,24 +681,82 @@ function renderLibraryList(){
   if(items.length===0){ list.innerHTML = '<div class="empty-note">Aucun élément pour le moment.</div>'; return; }
   list.innerHTML = items.map(it=>`
     <div class="lib-row" data-id="${it.id}">
-      <div>
-        <div class="ttl">${it.title}</div>
+      <div style="flex:1;min-width:0;cursor:pointer;" data-edit="${it.id}">
+        <div class="ttl">${escapeHtml(it.title)}</div>
         <div class="meta">${TYPE_LABEL[it.type]}</div>
       </div>
       <div class="status">${STATUS_LABEL[it.status]}</div>
+      ${it.resource_path ? (
+        looksLikeUrl(it.resource_path)
+          ? `<a class="res-btn" href="${escapeHtml(it.resource_path)}" target="_blank" rel="noopener">📂 Ouvrir</a>`
+          : `<button class="res-btn" data-copy="${escapeHtml(it.resource_path)}">📂 Copier le chemin</button>`
+      ) : ''}
+      <button class="icon-btn" data-edit-btn="${it.id}">✎</button>
       <button class="icon-btn del" data-del="${it.id}">🗑</button>
     </div>`).join('');
+
   list.querySelectorAll('[data-del]').forEach(btn=>{
-    btn.onclick = async ()=>{
+    btn.onclick = async (e)=>{
+      e.stopPropagation();
       if(!confirm('Supprimer cet élément de la bibliothèque ?')) return;
       try{
         await api('/api/items?id='+encodeURIComponent(btn.dataset.del), {method:'DELETE'});
       } catch(e){ return alert('Erreur: '+e.message); }
+      if(editingItemId === btn.dataset.del) resetLibraryForm();
       await fetchItems();
       renderLibraryList();
     };
   });
+
+  list.querySelectorAll('[data-copy]').forEach(btn=>{
+    btn.onclick = async (e)=>{
+      e.stopPropagation();
+      try{
+        await navigator.clipboard.writeText(btn.dataset.copy);
+        const original = btn.textContent;
+        btn.textContent = '✓ Copié';
+        setTimeout(()=>{ btn.textContent = original; }, 1200);
+      } catch(err){ alert('Chemin : '+btn.dataset.copy); }
+    };
+  });
+
+  list.querySelectorAll('[data-edit], [data-edit-btn]').forEach(el=>{
+    el.onclick = ()=>{
+      const id = el.dataset.edit || el.dataset.editBtn;
+      loadItemIntoForm(id);
+    };
+  });
 }
+
+function loadItemIntoForm(id){
+  const it = state.items.find(i=>i.id===id);
+  if(!it) return;
+  editingItemId = id;
+  document.getElementById('li-id').value = id;
+  document.getElementById('li-title').value = it.title;
+  document.getElementById('li-type').value = it.type;
+  document.getElementById('li-status').value = it.status;
+  document.getElementById('li-desc').value = it.description || '';
+  document.getElementById('li-resource').value = it.resource_path || '';
+  document.getElementById('li-form-title').textContent = 'Modifier l\'élément';
+  document.getElementById('li-add').textContent = 'Enregistrer les modifications';
+  document.getElementById('li-edit-cancel').style.display = 'inline-flex';
+}
+
+function resetLibraryForm(){
+  editingItemId = null;
+  document.getElementById('li-id').value = '';
+  document.getElementById('li-title').value = '';
+  document.getElementById('li-desc').value = '';
+  document.getElementById('li-resource').value = '';
+  document.getElementById('li-type').value = 'morceau';
+  document.getElementById('li-status').value = 'a_travailler';
+  document.getElementById('li-form-title').textContent = 'Ajouter un élément';
+  document.getElementById('li-add').textContent = 'Ajouter';
+  document.getElementById('li-edit-cancel').style.display = 'none';
+}
+
+document.getElementById('li-edit-cancel').onclick = resetLibraryForm;
 
 document.getElementById('li-add').onclick = async ()=>{
   const title = document.getElementById('li-title').value.trim();
@@ -686,12 +767,16 @@ document.getElementById('li-add').onclick = async ()=>{
     type: document.getElementById('li-type').value,
     status: document.getElementById('li-status').value,
     description: document.getElementById('li-desc').value || null,
+    resource_path: document.getElementById('li-resource').value.trim() || null,
   };
   try{
-    await api('/api/items', {method:'POST', body: JSON.stringify(payload)});
+    if(editingItemId){
+      await api('/api/items', {method:'PUT', body: JSON.stringify({id: editingItemId, ...payload})});
+    } else {
+      await api('/api/items', {method:'POST', body: JSON.stringify(payload)});
+    }
   } catch(e){ return alert('Erreur: '+e.message); }
-  document.getElementById('li-title').value='';
-  document.getElementById('li-desc').value='';
+  resetLibraryForm();
   await fetchItems();
   renderLibraryList();
 };

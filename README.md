@@ -96,3 +96,16 @@ L'app continue de lire/écrire tes données via Turso (donc il te faut une conne
 - ✅ Liens locaux cliquables, ouverture directe dans le navigateur (vue dossier)
 - ❌ L'app ne sera plus utilisable depuis ton téléphone ou un autre PC via l'URL Vercel — sauf si tu recommences à l'ouvrir via cette URL ponctuellement (rien ne l'en empêche techniquement, seuls les liens locaux ne fonctionneront pas dans ce cas)
 - Le dossier `local-protocol/` (protocole `ouvrir://`) n'est plus nécessaire, tu peux l'ignorer ou le supprimer
+
+## Séances récurrentes
+
+À la création d'une séance (pas en modification), coche **🔁 Séance récurrente** : choisis les jours de la semaine concernés (coche-en un seul pour "tous les lundis", tous les 7 pour "tous les jours", etc.) et une date de fin. L'app crée une séance indépendante pour chaque occurrence — modifier ou marquer "fait" une occurrence n'affecte pas les autres.
+
+À la suppression d'une séance qui fait partie d'une série, le choix est proposé : supprimer uniquement celle-ci, ou celle-ci et toutes les occurrences suivantes.
+
+Limite : 200 occurrences max par série (largement suffisant, ça évite une création accidentelle sur plusieurs années).
+
+**Migration requise avant utilisation :**
+```powershell
+node run-schema.js https://practice-planner-thier43.turso.io TON_TOKEN migration_002_recurring_sessions.sql
+```

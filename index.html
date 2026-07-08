@@ -310,6 +310,26 @@
         </select>
       </div>
     </div>
+    <div class="field" id="s-recurrence-wrap">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="s-recurring" style="width:auto;">
+        🔁 Séance récurrente
+      </label>
+      <div id="s-recurrence-options" style="display:none;margin-top:10px;">
+        <label style="margin-bottom:6px;">Se répète les</label>
+        <div class="timer-presets" id="s-recur-days" style="justify-content:flex-start;margin-bottom:12px;">
+          <div class="chip" data-day="1">Lun</div>
+          <div class="chip" data-day="2">Mar</div>
+          <div class="chip" data-day="3">Mer</div>
+          <div class="chip" data-day="4">Jeu</div>
+          <div class="chip" data-day="5">Ven</div>
+          <div class="chip" data-day="6">Sam</div>
+          <div class="chip" data-day="0">Dim</div>
+        </div>
+        <label>Jusqu'au</label>
+        <input type="date" id="s-recur-until">
+      </div>
+    </div>
     <div class="field">
       <label>Éléments travaillés</label>
       <div class="item-pick" id="s-items"></div>
@@ -620,7 +640,7 @@ function renderCalGrid(){
       block.style.top = top+'px';
       block.style.height = height+'px';
       const items = (sess.items||[]).map(it=>it.title).filter(Boolean);
-      block.innerHTML = `<div class="t">${sess.start_time.slice(0,5)} · ${minsLabel(sess.duration_minutes)}</div>
+      block.innerHTML = `<div class="t">${sess.series_id ? '🔁 ' : ''}${sess.start_time.slice(0,5)} · ${minsLabel(sess.duration_minutes)}</div>
         <div class="title-line">${items.length? items.join(', ') : (sess.notes ? sess.notes.slice(0,40) : '(sans titre)')}</div>`;
       block.onclick = (e)=>{ e.stopPropagation(); openSessionView(sess); };
       body.appendChild(block);
@@ -678,7 +698,7 @@ function openSessionView(sess){
   const d = new Date(sess.session_date+'T00:00:00');
   const dateStr = String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
   document.getElementById('iv-session-info').textContent =
-    `${dateStr} · ${sess.start_time.slice(0,5)} · ${minsLabel(sess.duration_minutes)}${sess.done ? ' · ✓ Fait' : ''}`;
+    `${dateStr} · ${sess.start_time.slice(0,5)} · ${minsLabel(sess.duration_minutes)}${sess.done ? ' · ✓ Fait' : ''}${sess.series_id ? ' · 🔁 récurrente' : ''}`;
 
   document.getElementById('iv-notes').textContent = sess.notes || '';
   document.getElementById('iv-notes').style.display = sess.notes ? 'block' : 'none';
@@ -726,9 +746,29 @@ function openSessionModal(sess, day, hour, minute){
   document.getElementById('s-category').value = sess ? sess.category : 'irish';
   document.getElementById('s-notes').value = sess ? (sess.notes||'') : '';
 
+  // La récurrence ne se propose qu'à la création. Une occurrence existante s'édite seule.
+  const recurWrap = document.getElementById('s-recurrence-wrap');
+  recurWrap.style.display = sess ? 'none' : 'block';
+  if(!sess){
+    document.getElementById('s-recurring').checked = false;
+    document.getElementById('s-recurrence-options').style.display = 'none';
+    document.querySelectorAll('#s-recur-days .chip').forEach(c=>{
+      c.classList.toggle('active-all', parseInt(c.dataset.day,10) === d.getDay());
+    });
+    const untilDefault = addDays(d, 90);
+    document.getElementById('s-recur-until').value = iso(untilDefault);
+  }
+
   renderItemPicker(sess ? new Set((sess.items||[]).map(it=>it.id)) : new Set());
   sessionOverlay.classList.add('open');
 }
+
+document.getElementById('s-recurring').addEventListener('change', (e)=>{
+  document.getElementById('s-recurrence-options').style.display = e.target.checked ? 'block' : 'none';
+});
+document.querySelectorAll('#s-recur-days .chip').forEach(chip=>{
+  chip.onclick = ()=> chip.classList.toggle('active-all');
+});
 
 function renderItemPicker(selectedIds){
   const cat = document.getElementById('s-category').value;
@@ -778,11 +818,24 @@ document.getElementById('s-save').onclick = async ()=>{
     notes: document.getElementById('s-notes').value || null,
     item_ids: Array.from(document.querySelectorAll('#s-items input:checked')).map(i=>i.value),
   };
+
+  if(!editingSessionId && document.getElementById('s-recurring').checked){
+    const days = Array.from(document.querySelectorAll('#s-recur-days .chip.active-all')).map(c=>parseInt(c.dataset.day,10));
+    const until = document.getElementById('s-recur-until').value;
+    if(days.length===0) return alert('Choisis au moins un jour de la semaine pour la récurrence.');
+    if(!until) return alert('Choisis une date de fin pour la récurrence.');
+    if(until < payload.session_date) return alert('La date de fin doit être après la date de début.');
+    payload.recurrence = { days, until };
+  }
+
   try{
     if(editingSessionId){
       await api('/api/sessions', {method:'PUT', body: JSON.stringify({id: editingSessionId, ...payload})});
     } else {
-      await api('/api/sessions', {method:'POST', body: JSON.stringify(payload)});
+      const result = await api('/api/sessions', {method:'POST', body: JSON.stringify(payload)});
+      if(result && result.count > 1){
+        alert(`${result.count} séances créées (du ${payload.session_date} au ${payload.recurrence.until}).`);
+      }
     }
   } catch(e){ return alert('Erreur: '+e.message); }
   sessionOverlay.classList.remove('open');
@@ -791,9 +844,24 @@ document.getElementById('s-save').onclick = async ()=>{
 
 document.getElementById('s-delete').onclick = async ()=>{
   if(!editingSessionId) return;
-  if(!confirm('Supprimer cette séance ?')) return;
+  const sess = state.sessions.find(s=>s.id===editingSessionId);
+  let deleteSeries = false;
+
+  if(sess && sess.series_id){
+    const wantsSeries = confirm("Cette séance fait partie d'une série récurrente.\n\nOK : supprimer aussi toutes les occurrences suivantes de la série.\nAnnuler : ne supprimer que cette séance-ci.");
+    if(wantsSeries){
+      deleteSeries = true;
+    } else if(!confirm('Supprimer uniquement cette séance ?')){
+      return;
+    }
+  } else {
+    if(!confirm('Supprimer cette séance ?')) return;
+  }
+
   try{
-    await api('/api/sessions?id='+encodeURIComponent(editingSessionId), {method:'DELETE'});
+    const qs = new URLSearchParams({id: editingSessionId});
+    if(deleteSeries) qs.set('series','true');
+    await api('/api/sessions?'+qs.toString(), {method:'DELETE'});
   } catch(e){ return alert('Erreur: '+e.message); }
   sessionOverlay.classList.remove('open');
   reload();
